@@ -98,12 +98,7 @@ jobs:
           if-no-files-found: warn
           retention-days: 3
 
-      - name: 单元测试
-        # push 触发时 inputs 为空，`inputs.x != false` 会求值为 false 而跳过，所以显式判断事件类型
-        if: ${{ github.event_name == 'push' || inputs.run_unit_test != false }}
-        continue-on-error: true
-        run: ./gradlew :app:testDebugUnitTest --stacktrace --no-daemon --max-workers=2 "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" "-Dkotlin.daemon.jvmargs=-Xmx2g"
-
+      # APK 先上传：单测失败不该挡住产物。单测不再 continue-on-error，失败要真实暴露
       - name: 上传 APK
         uses: actions/upload-artifact@v4
         with:
@@ -112,6 +107,11 @@ jobs:
             app/build/outputs/apk/**/*.apk
           if-no-files-found: warn
           retention-days: 30
+
+      - name: 单元测试
+        # push 触发时 inputs 为空，`inputs.x != false` 会求值为 false 而跳过，所以显式判断事件类型
+        if: ${{ github.event_name == 'push' || inputs.run_unit_test != false }}
+        run: ./gradlew :app:testDebugUnitTest --stacktrace --no-daemon --max-workers=2 "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" "-Dkotlin.daemon.jvmargs=-Xmx2g"
 
       - name: 上传单元测试报告
         if: ${{ always() && (github.event_name == 'push' || inputs.run_unit_test != false) }}
@@ -125,7 +125,7 @@ jobs:
   instrumented:
     needs: build
     runs-on: ubuntu-latest
-    timeout-minutes: 120
+    timeout-minutes: 240
     if: ${{ inputs.run_instrumented == true }}
     steps:
       - uses: actions/checkout@v4
@@ -145,6 +145,8 @@ jobs:
           arch: x86_64
           profile: pixel_4
           disable-animations: true
+          # GitHub 的 ubuntu runner 不开放 /dev/kvm 权限（ProbeKVM 报错），只能软件渲染跑模拟器
+          disable-linux-hw-accel: true
           script: |
             ./gradlew :app:connectedDebugAndroidTest --stacktrace \
               --no-daemon --max-workers=2 \
