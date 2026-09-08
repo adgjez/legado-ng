@@ -286,6 +286,9 @@ object AiMediaHelper {
             id = id,
             name = name.ifBlank { id },
             kind = kind.ifBlank { "mixed" },
+            coverPath = "",
+            shotCount = 0,
+            extraJson = "",
             createdAt = now,
             updatedAt = now
         )

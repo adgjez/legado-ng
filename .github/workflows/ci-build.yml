@@ -78,11 +78,11 @@ jobs:
           ./gradlew --version | head -8
           nproc && free -g | head -2
 
-      - name: Assemble ${{ inputs.build_type || 'Debug' }} (verbose KSP)
+      - name: Assemble ${{ inputs.build_type || 'Debug' }}
         run: |
           chmod +x gradlew
           TYPE="${{ inputs.build_type || 'Debug' }}"
-          ./gradlew ":app:assemble${TYPE}" --stacktrace --info \
+          ./gradlew ":app:assemble${TYPE}" --stacktrace \
             --no-daemon --max-workers=2 \
             "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" \
             "-Dkotlin.daemon.jvmargs=-Xmx2g" > assemble_full.log 2>&1

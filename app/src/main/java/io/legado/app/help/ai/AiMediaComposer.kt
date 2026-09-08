@@ -250,15 +250,27 @@ object AiMediaComposer {
         return Result.success(out)
     }
 
-    /** 读取首个视频轨的格式；[setDataSource] 失败（坏文件/不支持）时也要释放 extractor，否则泄漏 */
-    private fun videoFormat(path: String): MediaFormat {
+    /** 视频轨的关键元信息。MediaFormat 没有 mime/width/height 属性，必须按键取值；
+     *  [setDataSource] 失败（坏文件/不支持）时也要释放 extractor，否则泄漏。 */
+    private data class VideoMeta(val mime: String, val width: Int, val height: Int)
+
+    private fun videoFormat(path: String): VideoMeta {
         val ex = MediaExtractor()
         return try {
             ex.setDataSource(path)
             val vidIdx = (0 until ex.trackCount).firstOrNull { idx ->
                 ex.getTrackFormat(idx).getString(MediaFormat.KEY_MIME)?.startsWith("video/") == true
-            } ?: 0
-            ex.getTrackFormat(vidIdx)
+            }
+            val fmt = vidIdx?.let { ex.getTrackFormat(it) }
+            VideoMeta(
+                mime = fmt?.getString(MediaFormat.KEY_MIME).orEmpty(),
+                width = if (fmt?.containsKey(MediaFormat.KEY_WIDTH) == true) {
+                    fmt.getInteger(MediaFormat.KEY_WIDTH)
+                } else 0,
+                height = if (fmt?.containsKey(MediaFormat.KEY_HEIGHT) == true) {
+                    fmt.getInteger(MediaFormat.KEY_HEIGHT)
+                } else 0
+            )
         } finally {
             ex.release()
         }
