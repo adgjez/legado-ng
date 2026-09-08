@@ -156,8 +156,7 @@ val appDb by lazy {
             from = 115,
             to = 116,
             spec = DatabaseMigrations.Migration_115_116::class
-        ),
-        AutoMigration(from = 116, to = 117)
+        )
     ]
 )
 abstract class AppDatabase : RoomDatabase() {

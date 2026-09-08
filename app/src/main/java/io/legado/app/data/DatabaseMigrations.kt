@@ -25,7 +25,7 @@ object DatabaseMigrations {
             migration_99_100, migration_100_101, migration_101_102, migration_102_103,
             migration_103_104, migration_104_105, migration_105_106, migration_106_107,
             migration_107_108, migration_108_109, migration_109_110, migration_110_111,
-            migration_111_112, migration_112_113, migration_113_114, migration_117_118,
+            migration_111_112, migration_112_113, migration_113_114, migration_116_117, migration_117_118,
         )
     }
 
@@ -1100,6 +1100,42 @@ object DatabaseMigrations {
         columnName = "lyric"
     )
     class Migration_115_116 : AutoMigrationSpec
+
+    /**
+     * AI 媒体生成历史表（aiMediaGenerations）。
+     * 原设计是 AutoMigration(116,117)，但它需要 117.json schema 文件才能由 Room 生成；
+     * 该 schema 依赖一次成功构建才能导出（沙箱无 SDK 无法生成），与 migration_117_118 同理，
+     * 故改为手动迁移，SQL 严格对齐 [io.legado.app.data.entities.AiMediaGeneration] 实体。
+     */
+    private val migration_116_117 = object : Migration(116, 117) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                """CREATE TABLE IF NOT EXISTS `aiMediaGenerations` (
+                    `id` TEXT NOT NULL DEFAULT '',
+                    `kind` TEXT NOT NULL DEFAULT 'image',
+                    `providerId` TEXT NOT NULL DEFAULT '',
+                    `model` TEXT NOT NULL DEFAULT '',
+                    `prompt` TEXT NOT NULL DEFAULT '',
+                    `negativePrompt` TEXT NOT NULL DEFAULT '',
+                    `paramJson` TEXT NOT NULL DEFAULT '',
+                    `resultsJson` TEXT NOT NULL DEFAULT '',
+                    `projectId` TEXT NOT NULL DEFAULT '',
+                    `shotIndex` INTEGER NOT NULL DEFAULT 0,
+                    `seed` INTEGER NOT NULL DEFAULT 0,
+                    `durationSeconds` INTEGER NOT NULL DEFAULT 0,
+                    `width` INTEGER NOT NULL DEFAULT 0,
+                    `height` INTEGER NOT NULL DEFAULT 0,
+                    `revisedPrompt` TEXT NOT NULL DEFAULT '',
+                    `status` TEXT NOT NULL DEFAULT 'success',
+                    `errorMessage` TEXT NOT NULL DEFAULT '',
+                    `createdAt` INTEGER NOT NULL DEFAULT 0,
+                    PRIMARY KEY(`id`))"""
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_aiMediaGenerations_kind` ON `aiMediaGenerations` (`kind`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_aiMediaGenerations_projectId` ON `aiMediaGenerations` (`projectId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_aiMediaGenerations_createdAt` ON `aiMediaGenerations` (`createdAt`)")
+        }
+    }
 
     /**
      * AI 漫画 / AI 漫剧的 first-class 项目表。
