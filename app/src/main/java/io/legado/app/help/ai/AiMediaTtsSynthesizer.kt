@@ -1,5 +1,6 @@
 package io.legado.app.help.ai
 
+import android.os.Bundle
 import android.speech.tts.TextToSpeech
 import android.speech.tts.UtteranceProgressListener
 import splitties.init.appCtx
@@ -90,17 +91,22 @@ object AiMediaTtsSynthesizer {
             val doneLatch = CountDownLatch(1)
             var synthError: String? = null
             engine.setOnUtteranceProgressListener(object : UtteranceProgressListener() {
-                override fun onDone(utteranceId: String?) {
+                // 参数类型是平台类型 String!，必须声明为非空 String 才算实现抽象方法
+                override fun onStart(utteranceId: String) = Unit
+
+                override fun onDone(utteranceId: String) {
                     doneLatch.countDown()
                 }
 
-                override fun onError(utteranceId: String?) {
+                @Deprecated("Deprecated in Java")
+                override fun onError(utteranceId: String) {
                     synthError = "TTS 合成失败"
                     doneLatch.countDown()
                 }
             })
             val utteranceId = "ai_media_audio_${UUID.randomUUID()}"
-            val code = engine.synthesizeToFile(params.text, null, out.absolutePath, utteranceId)
+            // API 21+ 重载：synthesizeToFile(CharSequence, Bundle, File, String)
+            val code = engine.synthesizeToFile(params.text, Bundle(), out, utteranceId)
             if (code != TextToSpeech.SUCCESS) {
                 return Result.failure(AiMediaError.TtsUnavailable("TTS synthesizeToFile 返回错误码 $code"))
             }

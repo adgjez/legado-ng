@@ -4,6 +4,7 @@ import com.google.gson.JsonObject
 import io.legado.app.help.ai.AiConfig
 import io.legado.app.help.ai.AiImageParams
 import io.legado.app.help.ai.AiAudioParams
+import io.legado.app.help.ai.AiMediaComposer
 import io.legado.app.help.ai.AiMediaError
 import io.legado.app.help.ai.AiMediaHelper
 import io.legado.app.help.ai.AiMediaKind

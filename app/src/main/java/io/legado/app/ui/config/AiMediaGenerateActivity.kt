@@ -1,5 +1,6 @@
 package io.legado.app.ui.config
 
+import android.os.Bundle
 import android.widget.Toast
 import java.io.File
 import java.util.UUID
@@ -69,12 +70,13 @@ import io.legado.app.help.ai.AiMediaFieldDetector
 import io.legado.app.help.ai.AiMediaHelper
 import io.legado.app.help.ai.AiMediaKind
 import io.legado.app.help.ai.AiMediaProgress
+import io.legado.app.help.ai.AiMediaTaskState
 import io.legado.app.help.ai.AiModel
 import io.legado.app.help.ai.AiModelType
 import io.legado.app.help.ai.AiMediaProtocol
 import io.legado.app.help.ai.AiMediaReference
 import io.legado.app.help.ai.AiProviderStore
-import io.legado.app.help.ai.AiMediaProject
+import io.legado.app.data.entities.AiMediaProject
 import io.legado.app.help.ai.AiVideoParams
 import io.legado.app.ui.design.theme.NgAppTheme
 import kotlinx.coroutines.Dispatchers
@@ -101,6 +103,7 @@ class AiMediaGenerateActivity : AppCompatActivity() {
     }
 }
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun AiMediaGenerateScreen() {
     val context = LocalContext.current
@@ -334,7 +337,7 @@ private fun AiMediaGenerateScreen() {
                 onValueChange = { prompt = it },
                 label = { Text(stringResource(R.string.ai_media_prompt)) },
                 placeholder = { Text(stringResource(R.string.ai_media_prompt_hint)) },
-                modifier = fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth(),
                 minLines = 3,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
             )
@@ -520,7 +523,7 @@ private fun AiMediaGenerateScreen() {
                         value = newProjectName,
                         onValueChange = { newProjectName = it },
                         label = { Text(stringResource(R.string.ai_media_project_name_hint)) },
-                        modifier = fillMaxWidth(),
+                        modifier = Modifier.fillMaxWidth(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done)
                     )
@@ -785,7 +788,7 @@ private fun mediaContentUri(context: android.content.Context, path: String): Uri
         FileProvider.getUriForFile(context, "${context.packageName}.fileProvider", file)
     }.getOrElse { file.toUri() }
 }
-\n
+
 /** 模型输入：可直接手填，也可从该服务商已配置的同类型模型中挑选 */
 @Composable
 private fun ModelField(

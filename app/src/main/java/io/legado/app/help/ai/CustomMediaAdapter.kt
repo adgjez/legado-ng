@@ -32,7 +32,7 @@ internal class CustomMediaAdapter : AiMediaProtocolAdapter {
                 val params = spec.video
                 addProperty("prompt", params.prompt)
                 params.aspectRatio?.takeIf { it.isNotBlank() }?.let { addProperty("aspect_ratio", it) }
-                params.size?.takeIf { it.isNotBlank() }?.let { addProperty("size", it) }
+                params.resolution?.takeIf { it.isNotBlank() }?.let { addProperty("size", it) }
                 params.durationSeconds?.let {
                     addProperty("seconds", it)
                     addProperty("duration", it)

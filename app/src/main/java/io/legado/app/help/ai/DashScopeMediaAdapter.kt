@@ -84,8 +84,7 @@ internal class DashScopeMediaAdapter : AiMediaProtocolAdapter {
             addProperty("model", setting.modelFor(AiMediaKind.VIDEO))
             add("input", input)
             add("parameters", JsonObject().apply {
-                params.size?.takeIf { it.isNotBlank() }?.let { addProperty("size", normalizeSize(it)) }
-                    ?: params.resolution?.takeIf { it.isNotBlank() }?.let { addProperty("size", it) }
+                params.resolution?.takeIf { it.isNotBlank() }?.let { addProperty("size", normalizeSize(it)) }
                 params.durationSeconds?.let { addProperty("duration", it) }
                 params.seed?.let { addProperty("seed", it) }
             })

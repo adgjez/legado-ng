@@ -189,6 +189,7 @@ private fun resolveComposeKind(
 /** 一次 App 内合成请求；[isDrama] 决定走 [AiMediaComposer.composeDrama] 还是 composeComic */
 private data class ComposeRequest(val projectId: String, val isDrama: Boolean)
 
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
 @Composable
 private fun AiMediaLibraryScreen() {
     val context = LocalContext.current
@@ -313,7 +314,13 @@ private fun AiMediaLibraryScreen() {
                 ) {
                 items(
                     count = rows.size,
-                    key = { index -> rows[index].let { if (it is LibRow.Header) "h:${it.key}" else "c:${it.item.entity.id}:${it.item.path}" } },
+                    key = { index ->
+                        // if/else 对 sealed 父类不会智能转换成剩下的子类，必须走 when
+                        when (val row = rows[index]) {
+                            is LibRow.Header -> "h:${row.key}"
+                            is LibRow.Cell -> "c:${row.item.entity.id}:${row.item.path}"
+                        }
+                    },
                     span = { index ->
                         val row = rows[index]
                         GridItemSpan(if (row is LibRow.Header) maxLineSpan else 1)
@@ -421,6 +428,7 @@ private fun AiMediaLibraryScreen() {
     }
 }
 
+@OptIn(androidx.compose.foundation.ExperimentalFoundationApi::class)
 @Composable
 private fun MediaCell(
     item: LibItem,
@@ -440,9 +448,10 @@ private fun MediaCell(
             val bitmap by produceState<Bitmap?>(null, item.path) {
                 value = withContext(Dispatchers.IO) { loadThumb(item) }
             }
-            if (bitmap != null) {
+            val bmp = bitmap
+            if (bmp != null) {
                 Image(
-                    bitmap = bitmap.asImageBitmap(),
+                    bitmap = bmp.asImageBitmap(),
                     contentDescription = null,
                     modifier = Modifier.fillMaxWidth().size(120.dp)
                 )
