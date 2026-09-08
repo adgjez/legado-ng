@@ -1,0 +1,153 @@
+name: CI Build
+
+# 本地内存不够时用的云构建：产出 Debug/Release APK + 跑单元测试。
+# 公开仓库的标准 runner 是 4 vCPU / 16GB，比一般开发机宽裕；
+# 仍然显式收敛 Gradle / Kotlin daemon 的堆并加了 8G swap，避免 Assembly 阶段 OOM。
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+    inputs:
+      build_type:
+        description: '构建类型'
+        type: choice
+        options: [Debug, Release]
+        default: Debug
+      run_unit_test:
+        description: '跑单元测试'
+        type: boolean
+        default: true
+      run_instrumented:
+        description: '跑 instrumentation 测试（真机/模拟器，很慢）'
+        type: boolean
+        default: false
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+env:
+  GRADLE_ARGS: >-
+    --no-daemon
+    --max-workers=2
+    -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
+    -Dkotlin.daemon.jvmargs="-Xmx2g"
+
+jobs:
+
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 准备 asset 占位文件（对齐仓库约定，避免缺资源导致构建失败）
+        run: |
+          mkdir -p app/src/main/assets
+          [ -f app/src/main/assets/18PlusList.txt ] || echo "" > app/src/main/assets/18PlusList.txt
+          [ -f app/src/main/assets/updateLog.md ]   || echo "" > app/src/main/assets/updateLog.md
+
+      - name: 加 8G swap（兜底防 OOM）
+        run: |
+          sudo swapoff -a || true
+          sudo fallocate -l 8G /swapfile
+          sudo chmod 600 /swapfile
+          sudo mkswap /swapfile
+          sudo swapon /swapfile
+          free -h
+
+      - name: JDK 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - name: Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Setup Gradle（带依赖缓存）
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: 显示环境
+        run: |
+          java -version
+          ./gradlew --version | head -8
+          nproc && free -g | head -2
+
+      - name: Assemble ${{ inputs.build_type || 'Debug' }}
+        run: |
+          chmod +x gradlew
+          TYPE="${{ inputs.build_type || 'Debug' }}"
+          ./gradlew :app:assemble${TYPE} --stacktrace $GRADLE_ARGS
+
+      - name: 单元测试
+        if: ${{ inputs.run_unit_test != false }}
+        continue-on-error: true
+        run: ./gradlew :app:testDebugUnitTest --stacktrace $GRADLE_ARGS
+
+      - name: 上传 APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-apk-${{ github.run_number }}
+          path: |
+            app/build/outputs/apk/**/*.apk
+          if-no-files-found: warn
+          retention-days: 30
+
+      - name: 上传单元测试报告
+        if: ${{ always() && inputs.run_unit_test != false }}
+        uses: actions/upload-artifact@v4
+        with:
+          name: unit-test-report-${{ github.run_number }}
+          path: app/build/reports/tests/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  instrumented:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 120
+    if: ${{ inputs.run_instrumented == true }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: android-actions/setup-android@v3
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Instrumentation 测试（API 33 模拟器）
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 33
+          arch: x86_64
+          profile: pixel_4
+          disable-animations: true
+          script: |
+            ./gradlew :app:connectedDebugAndroidTest --stacktrace \
+              --no-daemon --max-workers=2 \
+              -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" \
+              -Dkotlin.daemon.jvmargs="-Xmx2g" \
+              --tests "io.legado.app.MigrationTest" \
+              --tests "io.legado.app.data.AiMediaProjectDaoTest" \
+              --tests "io.legado.app.help.ai.AiMediaComposerInstrumentedTest"
+
+      - name: 上传 instrumentation 报告
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-test-report-${{ github.run_number }}
+          path: app/build/reports/androidTests/
+          if-no-files-found: ignore
+          retention-days: 7
