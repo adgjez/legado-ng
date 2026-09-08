@@ -99,7 +99,8 @@ jobs:
           retention-days: 3
 
       - name: 单元测试
-        if: ${{ inputs.run_unit_test != false }}
+        # push 触发时 inputs 为空，`inputs.x != false` 会求值为 false 而跳过，所以显式判断事件类型
+        if: ${{ github.event_name == 'push' || inputs.run_unit_test != false }}
         continue-on-error: true
         run: ./gradlew :app:testDebugUnitTest --stacktrace --no-daemon --max-workers=2 "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" "-Dkotlin.daemon.jvmargs=-Xmx2g"
 
@@ -113,7 +114,7 @@ jobs:
           retention-days: 30
 
       - name: 上传单元测试报告
-        if: ${{ always() && inputs.run_unit_test != false }}
+        if: ${{ always() && (github.event_name == 'push' || inputs.run_unit_test != false) }}
         uses: actions/upload-artifact@v4
         with:
           name: unit-test-report-${{ github.run_number }}
