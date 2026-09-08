@@ -13,6 +13,7 @@ import io.legado.app.data.dao.AgentMemoryDao
 import io.legado.app.data.dao.AgentToolResultDao
 import io.legado.app.data.dao.AiChatDao
 import io.legado.app.data.dao.AiMediaGenerationDao
+import io.legado.app.data.dao.AiMediaProjectDao
 import io.legado.app.data.dao.AiSkillDao
 import io.legado.app.data.dao.BookChapterDao
 import io.legado.app.data.dao.BookCharacterDao
