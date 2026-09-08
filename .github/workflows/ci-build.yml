@@ -78,14 +78,25 @@ jobs:
           ./gradlew --version | head -8
           nproc && free -g | head -2
 
-      - name: Assemble ${{ inputs.build_type || 'Debug' }}
+      - name: Assemble ${{ inputs.build_type || 'Debug' }} (verbose KSP)
         run: |
           chmod +x gradlew
           TYPE="${{ inputs.build_type || 'Debug' }}"
-          ./gradlew ":app:assemble${TYPE}" --stacktrace \
+          ./gradlew ":app:assemble${TYPE}" --stacktrace --info \
             --no-daemon --max-workers=2 \
             "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" \
-            "-Dkotlin.daemon.jvmargs=-Xmx2g"
+            "-Dkotlin.daemon.jvmargs=-Xmx2g" > assemble_full.log 2>&1
+          echo "gradle exit: $?"
+          tail -60 assemble_full.log
+
+      - name: 上传完整构建日志
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: assemble-log-${{ github.run_number }}
+          path: assemble_full.log
+          if-no-files-found: warn
+          retention-days: 3
 
       - name: 单元测试
         if: ${{ inputs.run_unit_test != false }}
