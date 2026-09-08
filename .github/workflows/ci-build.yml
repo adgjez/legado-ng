@@ -3,6 +3,9 @@ name: CI Build
 # 本地内存不够时用的云构建：产出 Debug/Release APK + 跑单元测试。
 # 公开仓库的标准 runner 是 4 vCPU / 16GB，比一般开发机宽裕；
 # 仍然显式收敛 Gradle / Kotlin daemon 的堆并加了 8G swap，避免 Assembly 阶段 OOM。
+#
+# 注意：Gradle JVM 参数必须在 run: 脚本里用 shell 引号内联，不能放进 env: 块
+# （env 里的引号会变成字面量传给 JVM，导致 -Dfile.encoding=UTF-8" 非法）。
 
 on:
   push:
@@ -31,13 +34,6 @@ concurrency:
 permissions:
   contents: read
 
-env:
-  GRADLE_ARGS: >-
-    --no-daemon
-    --max-workers=2
-    -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8"
-    -Dkotlin.daemon.jvmargs="-Xmx2g"
-
 jobs:
 
   build:
@@ -65,7 +61,7 @@ jobs:
           free -h
 
       - name: JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
@@ -74,7 +70,7 @@ jobs:
         uses: android-actions/setup-android@v3
 
       - name: Setup Gradle（带依赖缓存）
-        uses: gradle/actions/setup-gradle@v4
+        uses: gradle/actions/setup-gradle@v5
 
       - name: 显示环境
         run: |
@@ -86,12 +82,15 @@ jobs:
         run: |
           chmod +x gradlew
           TYPE="${{ inputs.build_type || 'Debug' }}"
-          ./gradlew :app:assemble${TYPE} --stacktrace $GRADLE_ARGS
+          ./gradlew ":app:assemble${TYPE}" --stacktrace \
+            --no-daemon --max-workers=2 \
+            "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -XX:+HeapDumpOnOutOfMemoryError -Dfile.encoding=UTF-8" \
+            "-Dkotlin.daemon.jvmargs=-Xmx2g"
 
       - name: 单元测试
         if: ${{ inputs.run_unit_test != false }}
         continue-on-error: true
-        run: ./gradlew :app:testDebugUnitTest --stacktrace $GRADLE_ARGS
+        run: ./gradlew :app:testDebugUnitTest --stacktrace --no-daemon --max-workers=2 "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" "-Dkotlin.daemon.jvmargs=-Xmx2g"
 
       - name: 上传 APK
         uses: actions/upload-artifact@v4
@@ -120,12 +119,12 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
       - uses: android-actions/setup-android@v3
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v5
 
       - name: Instrumentation 测试（API 33 模拟器）
         uses: reactivecircus/android-emulator-runner@v2
@@ -137,8 +136,8 @@ jobs:
           script: |
             ./gradlew :app:connectedDebugAndroidTest --stacktrace \
               --no-daemon --max-workers=2 \
-              -Dorg.gradle.jvmargs="-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" \
-              -Dkotlin.daemon.jvmargs="-Xmx2g" \
+              "-Dorg.gradle.jvmargs=-Xmx4g -XX:MaxMetaspaceSize=1g -Dfile.encoding=UTF-8" \
+              "-Dkotlin.daemon.jvmargs=-Xmx2g" \
               --tests "io.legado.app.MigrationTest" \
               --tests "io.legado.app.data.AiMediaProjectDaoTest" \
               --tests "io.legado.app.help.ai.AiMediaComposerInstrumentedTest"
