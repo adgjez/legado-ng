@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:tools="http://schemas.android.com/tools" tools:ignore="MissingTranslation">
+    <string name="pk_bookshelf_px" translatable="false">bookshelf_px</string>
+    <string name="email" translatable="false">gekunfei@live.com</string>
+
+    <string name="contributors_url" translatable="false">https://github.com/joestar817/legado_NG</string>
+    <string name="telegram_group_url" translatable="false">https://t.me/+lYttMZGrQ1RkOTE1</string>
+    <string name="telegram" translatable="false">Telegram</string>
+
+    <string name="http_ip" translatable="false">http://%1$s:%2$d</string>
+    <string name="git_hub" translatable="false">GitHub</string>
+    <string name="diy_edit_source_group_title" translatable="false">【%s】</string>
+    <string name="vip_title" translatable="false">🔒%s</string>
+    <string name="payed_title" translatable="false">🔓%s</string>
+
+    <string name="separator" translatable="false">丨</string>
+
+</resources>
